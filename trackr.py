@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.1.0
+# trackr 2.1.1
 #
 # © 2020 by luk3yx.
 #
@@ -47,7 +47,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.1.0'
+__version__ = '2.1.1'
 
 # Errors
 class BotError(Exception):
@@ -62,9 +62,23 @@ def err(msg: str, *args, **kwargs) -> None:
 def plural(n: int) -> str:
     return '' if n == 1 else 's'
 
-# Hacks to get a valid lua string
+# Get a valid Lua representation of a string
+def _escape_string(x: bytes):
+    yield '"'
+    for char in x:
+        if char == 0x22: # "
+            yield r'\"'
+        elif char == 0x5c:
+            yield r'\\'
+        elif 0x7f > char > 0x1f:
+            yield chr(char)
+        else:
+            yield '\\' + str(char).zfill(3)
+
+    yield '"'
+
 def lua_repr(s: str) -> str:
-    return repr(s.encode('utf-8'))[1:]
+    return ''.join(_escape_string(s.encode('utf-8')))
 
 # A player action error
 class ModerationError(Exception):
