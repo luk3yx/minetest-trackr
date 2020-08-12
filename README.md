@@ -1,11 +1,11 @@
 # trackr
 
-An IRC bot that checks player lists for all servers in a
+An IRC bot that checks player lists for all Minetest servers in a IRC channel.
 
 ## Usage
 
  - Make sure you are using the latest miniirc and miniirc_extras.
-    - `sudo pip3 install --upgrade miniirc miniirc_extras`
+    - `pip3 install --upgrade miniirc miniirc_extras`
  - Copy and edit `trackr.example.ini`.
  - Run `./trackr.py /path/to/trackr.ini`
 
