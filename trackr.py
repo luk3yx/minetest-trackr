@@ -47,7 +47,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.1.1'
+__version__ = '2.2.0'
 
 # Errors
 class BotError(Exception):
