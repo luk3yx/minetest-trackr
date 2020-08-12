@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.1.1
+# trackr 2.2.0
 #
 # © 2020 by luk3yx.
 #
@@ -37,7 +37,7 @@
 #  # server_list = MinetestServer1, MinetestServer2
 #
 
-import hashlib, miniirc, miniirc_extras, os, random, sys, time
+import hashlib, math, miniirc, miniirc_extras, os, random, sys, time
 assert miniirc.ver >= (1,4,0), 'Update miniirc.'
 assert miniirc_extras.ver >= (0,2,5), 'Update miniirc_extras.'
 
@@ -84,6 +84,34 @@ def lua_repr(s: str) -> str:
 class ModerationError(Exception):
     pass
 
+_durations = {'ms': 0.001, 's': 1, 'm': 60, 'h': 3600, 'd': 86400, 'D': 86400,
+              'W': 604800, 'M': 2592000, 'Y': 31104000}
+def _parse_duration(duration: Union[str, int, float]) -> int:
+    """
+    Returns the duration in seconds. If the specified duration is an int or
+    float, math.floor(duration) is returned.
+    """
+
+    if isinstance(duration, str):
+        for suffix, m in _durations.items():
+            if duration.endswith(suffix):
+                duration = duration[:-len(suffix)]
+                multiplier = m
+                break
+        else:
+            multiplier = 60
+        try:
+            duration = float(duration)
+        except ValueError:
+            raise ModerationError('Invalid duration!')
+    else:
+        multiplier = 1
+
+    duration = math.floor(duration * multiplier)
+    if duration <= 0:
+        raise ModerationError('The duration must be at least one second!')
+    return duration
+
 # A player class
 class Player(str):
     total_warnings: int = 2
@@ -105,26 +133,10 @@ class Player(str):
         assert self._server
         self._server.msg(f'cmd grant {self} shout')
 
-    # Tempmute the player (mega hax)
+    # Tempmute the player with //lua hacks
     def tempmute(self, duration: Union[str, int, float]) -> None:
         assert self._server
-
-        duration, multiplier = (duration or 5), 60
-        if isinstance(duration, str):
-            if duration.endswith('m'):
-                duration = duration[:-1]
-            elif duration.endswith('s'):
-                duration, multiplier = duration[:-1], 1
-            elif duration.endswith('h'):
-                duration, multiplier = duration[:-1], 3600
-
-        try:
-            duration = float(duration)
-            assert duration > 0
-        except:
-            raise ModerationError('Invalid duration!')
-        duration = int(duration * multiplier)
-
+        duration = _parse_duration(duration)
         if duration > 7200:
             raise ModerationError('You cannot tempmute someone for over 2 '
                 'hours!')
@@ -151,7 +163,7 @@ class Player(str):
                 self.warnings, plural(self.warnings))
             self.warnings -= 1
         else:
-            self.tempmute(30)
+            self.tempmute(30 * 60)
             msg2 = 'been temporarily muted for 30 minutes.'
             self.warnings = self.total_warnings
 
@@ -166,6 +178,19 @@ class Player(str):
             '" .. (default.gui_bg or ""))')
 
         return self + ' has ' + msg2.replace('you', 'they')
+
+    # Temporarily ban a player
+    def tempban(self, sender: str, duration: Union[str, int, float],
+            reason: str) -> None:
+        assert self._server
+        duration = _parse_duration(duration)
+        if duration > _durations['M']:
+            raise ModerationError('You cannot tempban someone for longer than '
+                '1 month!')
+
+        self._server.msg(
+            f'cmd xtempban {self} {duration}s Banned by {sender}@IRC: {reason}'
+        )
 
     def __repr__(self) -> str:
         return f'{type(self).__name__}({super().__repr__()}, {self.warnings})'
@@ -432,11 +457,11 @@ class Trackr:
         del params
 
         if sid not in self.users:
-            irc.msg(nick, f"What's a {repr(sid)}?")
+            irc.msg(nick, f"What's a {sid!r}?")
             return
         server: User = self.users[sid]
         if 'players' not in server.keys():
-            irc.msg(nick, f'{repr(sid)} is not a server!')
+            irc.msg(nick, f'{sid!r} is not a server!')
 
         server['logged_in'] = 0
         server.msg('login trackr', pw)
@@ -466,10 +491,10 @@ class Trackr:
                 server = self.users[sid]
                 assert server in chan
             except:
-                return f'The server {repr(sid)} does not exist!'
+                return f'The server {sid!r} does not exist!'
 
             if victim not in server.get('players', ()):
-                return f'The player {repr(victim)} is not in {server.nick}.'
+                return f'The player {victim!r} is not in {server.nick}.'
         else:
             for s, p in self.items(chan):
                 if p and victim in p:
@@ -492,10 +517,16 @@ class Trackr:
                 res = getattr(player, cmd)(hostmask[0], n[-1])
             elif cmd == 'tempmute':
                 player.tempmute(n[-1])
+            elif cmd == 'tempban':
+                try:
+                    duration, message = n[-1].split(' ', 1)
+                except ValueError:
+                    return 'Usage: tempban <player> <duration> <reason>'
+                player.tempban(hostmask[0], duration, message)
             else:
                 return 'Internal error!'
         except ModerationError as e:
-            return 'Error: ' + str(e)
+            return f'Error: {e}'
 
         if not res:
             res = f'Attempted to {cmd} {player}.'
@@ -537,7 +568,8 @@ class Trackr:
 
             if cmd == 'players':
                 return self._players_cmd(channel, nick)
-            elif cmd in ('kick', 'mute', 'unmute', 'tempmute', 'warn'):
+            elif cmd in ('kick', 'mute', 'unmute', 'tempmute', 'warn',
+                    'tempban'):
                 irc.msg(channel, nick + ': ' + self._moderate(channel,
                     hostmask, cmd, cmd_args[1] if len(cmd_args) > 1 else ''))
                 return
