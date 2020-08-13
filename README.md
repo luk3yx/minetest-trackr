@@ -19,6 +19,8 @@ An IRC bot that checks player lists for all Minetest servers in a IRC channel.
     to technical limitations with trackr.
  - `,warn <player> <message>`: Shows the player a warning dialog.
  - `,kick <player> <reason>`: Kicks a player.
+ - `,tempban <player> <duration> <reason>`: Temporarily bans a player. You
+    cannot tempban a player for longer than a month with trackr.
  - `,badservers`: Lists the servers trackr isn't logged into.
 
 ### Parameter format
@@ -28,7 +30,8 @@ An IRC bot that checks player lists for all Minetest servers in a IRC channel.
     is in multiple servers, you can do `player_name@server_name`.
  - `duration` (default: 5 minutes): The duration to mute the player for. By
     default, this is in minutes, however this can be changed by appending `s`
-    (seconds), `m` (minutes), or `h` (hours).
+    (seconds), `m` (minutes), `h` (hours), `d` (days), `M` (months),
+    `Y` (years), or `ms` (milliseconds).
  - `message`: The message to tell the player.
  - `reason`: The reason for kicking the player. This is shown to the player
     when being kicked.
