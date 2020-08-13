@@ -668,7 +668,7 @@ class Trackr:
                 server['players'] = players = PlayerList()
                 players.server = server
                 server.msg('players', '-',
-                    'If you are a human, report this to luk3yx.')
+                    'If you are a human, report this to the bot owner.')
             return
 
         if not self.is_server(args[0], hostmask):
@@ -679,7 +679,7 @@ class Trackr:
         players.server = user
         user['players'] = players
         irc.msg(hostmask[0],
-            'players - If you are a human, report this to luk3yx.')
+            'players - If you are a human, report this to the bot owner.')
 
 # The main script
 def main() -> Trackr:
