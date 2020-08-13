@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.0
+# trackr 2.2.1
 #
 # © 2020 by luk3yx.
 #
@@ -33,8 +33,11 @@
 #  secret = Random string to use when generating passwords
 #  admins = Edgy1, luk3yx
 #
-#  # Optional and case-sensitive (defaults to +v list)
+#  # Optional and case-sensitive. If not specified, server_mode is used.
 #  # server_list = MinetestServer1, MinetestServer2
+#
+#  # Optional, the mode to use when finding MT servers. Default: v
+#  # server_mode = v
 #
 
 import hashlib, math, miniirc, miniirc_extras, os, random, sys, time
@@ -47,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.0'
+__version__ = '2.2.1'
 
 # Errors
 class BotError(Exception):
@@ -292,6 +295,10 @@ class Trackr:
         if serverlist:
             self.server_list = frozenset(map(str.strip, serverlist.split(',')))
 
+        self.server_mode: str = config.get('server_mode', 'v')
+        if len(self.server_mode) != 1:
+            err(f'Invalid server mode {self.server_mode!r}.')
+
         kwargs = {}
         for i in 'ident', 'realname', 'ns_identity', 'connect_modes', \
                 'quit_message':
@@ -346,7 +353,7 @@ class Trackr:
                     hostmask = self.users[hostmask]
                 return 'players' in hostmask.keys()
 
-        modes = self.server_list or channel.modes.getset('v')
+        modes = self.server_list or channel.modes.getset(self.server_mode)
 
         if isinstance(hostmask, User):
             hostmask = hostmask.hostmask
