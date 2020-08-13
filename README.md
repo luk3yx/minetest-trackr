@@ -28,7 +28,7 @@ An IRC bot that checks player lists for all Minetest servers in a IRC channel.
  - `player`: A Minetest/MultiCraft/??? player. This can be the player name if
     the player is in one (and only one) server on the channel. If the player
     is in multiple servers, you can do `player_name@server_name`.
- - `duration` (default: 5 minutes): The duration to mute the player for. By
+ - `duration` (default: 5 minutes): The duration to mute/ban the player for. By
     default, this is in minutes, however this can be changed by appending `s`
     (seconds), `m` (minutes), `h` (hours), `d` (days), `M` (months),
     `Y` (years), or `ms` (milliseconds).
