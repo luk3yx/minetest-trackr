@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.1
+# trackr 2.2.2
 #
 # © 2020 by luk3yx.
 #
@@ -50,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.1'
+__version__ = '2.2.2'
 
 # Errors
 class BotError(Exception):
@@ -546,11 +546,10 @@ class Trackr:
         channel: str = args[0]
         msg:     str = args[-1]
 
-        # Check for MT players
+        # Check for relayed users
         if msg.startswith('<'):
             n: List[str] = msg.split(' ', 1)
-            if len(n) > 1 and n[0].endswith('>') and (n[0][1].isalnum() or
-                    n[0][1] == '\x03'):
+            if len(n) > 1 and n[0].endswith('>'):
                 nick = f'{n[0][1:-1]}@{nick}'
                 msg  = n[1].strip()
             del n
