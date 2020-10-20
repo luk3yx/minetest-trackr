@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.2
+# trackr 2.2.3
 #
 # © 2020 by luk3yx.
 #
@@ -41,7 +41,7 @@
 #
 
 import hashlib, math, miniirc, miniirc_extras, os, random, sys, time
-assert miniirc.ver >= (1,4,0), 'Update miniirc.'
+assert miniirc.ver >= (1,4,3), 'Update miniirc.'
 assert miniirc_extras.ver >= (0,2,5), 'Update miniirc_extras.'
 
 from miniirc_extras import AbstractIRC, Hostmask
@@ -50,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.2'
+__version__ = '2.2.3'
 
 # Errors
 class BotError(Exception):
@@ -562,7 +562,7 @@ class Trackr:
             cmd_args = msg[len(self.prefix):].split(' ', 1)
             cmd = cmd_args[0].lower()
 
-            if irc.nick.lower() == args[0].lower():
+            if irc.current_nick.lower() == args[0].lower():
                 if cmd != 'login':
                     irc.msg(hostmask[0],
                         'You may not execute commands in PMs.')
@@ -662,7 +662,7 @@ class Trackr:
     def _handle_join(self, irc: AbstractIRC, hostmask: Hostmask,
             args: List[str]) -> None:
         time.sleep(1)
-        if hostmask[0].lower() == irc.nick.lower():
+        if hostmask[0].lower() == irc.current_nick.lower():
             for server in self.servers(args[0]):
                 server['players'] = players = PlayerList()
                 players.server = server
