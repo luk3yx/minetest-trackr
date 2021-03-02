@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.3
+# trackr 2.2.4
 #
 # © 2020 by luk3yx.
 #
@@ -50,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.3'
+__version__ = '2.2.4'
 
 # Errors
 class BotError(Exception):
@@ -548,9 +548,9 @@ class Trackr:
 
         # Check for relayed users
         if msg.startswith('<'):
-            n: List[str] = msg.split(' ', 1)
-            if len(n) > 1 and n[0].endswith('>'):
-                nick = f'{n[0][1:-1]}@{nick}'
+            n: List[str] = msg.split('> ', 1)
+            if len(n) > 1 and '>' not in n[0]:
+                nick = f'{n[0][1:]}@{nick}'
                 msg  = n[1].strip()
             del n
 
