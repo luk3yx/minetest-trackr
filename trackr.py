@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.4
+# trackr 2.2.5
 #
 # © 2020 by luk3yx.
 #
@@ -50,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.4'
+__version__ = '2.2.5'
 
 # Errors
 class BotError(Exception):
@@ -256,7 +256,6 @@ class PlayerList(dict):
 # The bot
 class Trackr:
     cooldown: int = 15
-    last_list: Union[int, float] = 0
     irc: AbstractIRC
 
     # Alias for self.irc.debug
@@ -281,6 +280,7 @@ class Trackr:
         config: Dict[str, str] = rawconfig['trackr']
         del rawconfig
         self.config: Dict[str, str] = config
+        self.cooldowns: Dict[str, float] = {}
 
         self._conf_assert('ip', ('ssl_port', int), 'nick', 'channels',
             'admins')
@@ -415,12 +415,12 @@ class Trackr:
     def _players_cmd(self, channel: str, nick: str) -> None:
         irc: AbstractIRC = self.irc
 
-        t = time.time()
-        if t <= self.last_list + self.cooldown:
-            irc.msg(channel, nick + ': You can only run \2.players\2 once',
+        t = time.monotonic()
+        if t <= self.cooldowns.get(channel, -math.inf) + self.cooldown:
+            irc.msg(channel, f'{nick}: You can only run \2.players\2 once',
                 f'every \2{self.cooldown} seconds\2.')
             return
-        self.last_list = t
+        self.cooldowns[channel] = t
 
         # Get the player list
         total: int    = 0
@@ -440,7 +440,7 @@ class Trackr:
             players2.sort()
             irc.msg(channel, 'Players on \2{}\2: {}'.format(server.nick,
                 ', '.join(players2)))
-            self.last_list += 0.5
+            self.cooldowns[channel] += 0.5
             time.sleep(0.5)
 
         # Display the summary
