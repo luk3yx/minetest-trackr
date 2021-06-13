@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.5
+# trackr 2.2.6
 #
 # © 2020 by luk3yx.
 #
@@ -50,7 +50,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
-__version__ = '2.2.5'
+__version__ = '2.2.6'
 
 # Errors
 class BotError(Exception):
@@ -285,7 +285,7 @@ class Trackr:
         self._conf_assert('ip', ('ssl_port', int), 'nick', 'channels',
             'admins')
 
-        self._secret: bytes = config.get('secret', 'Oops').encode('utf-8')
+        self._secret: bytes = config.get('secret', '').encode('utf-8')
         self.admins: FrozenSet[str] = frozenset(map(
             lambda n : n.strip().lower(), config['admins'].split(',')))
         self.prefix = config.get('prefix', config['nick'] + ': ')
@@ -478,6 +478,9 @@ class Trackr:
     # Handle the moderation commands
     def _moderate(self, channel: str, hostmask: Hostmask, cmd: str,
             param: str) -> str:
+        if not self._secret:
+            return 'Moderation is disabled!'
+
         chan: AbstractChannel = self.chans[channel]
         if not isinstance(chan, Channel):
             return 'Error: This should never happen.'
@@ -580,6 +583,10 @@ class Trackr:
                     hostmask, cmd, cmd_args[1] if len(cmd_args) > 1 else ''))
                 return
             elif cmd == 'badservers':
+                if not self._secret:
+                    irc.msg(channel, f'{nick}: As moderation is disabled, no '
+                            f'attempt has been made to log in to servers.')
+                    return
                 bad = []
                 for s_ in self.servers(channel):
                     if not s_.get('logged_in'):
@@ -641,10 +648,10 @@ class Trackr:
                     del players[player]
 
             # Log in
-            if server.get('logged_in') is None:
+            if server.get('logged_in') is None and self._secret:
                 self.debug('[trackr] Logging into', hostmask[0])
                 server.msg('login trackr', self.get_password(hostmask))
-        elif msg.startswith('You are now logged in as'):
+        elif msg.startswith('You are now logged in as') and self._secret:
             self.debug('[trackr] Logged into', hostmask[0])
             logged_in = server.get('logged_in')
             if logged_in == 0 and logged_in is not False:
