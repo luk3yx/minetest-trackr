@@ -40,6 +40,7 @@
 #  # server_mode = v
 #
 
+from __future__ import annotations
 import hashlib, math, miniirc, miniirc_extras, os, random, sys, time
 assert miniirc.ver >= (1,4,3), 'Update miniirc.'
 assert miniirc_extras.ver >= (0,2,5), 'Update miniirc_extras.'
@@ -48,7 +49,7 @@ from miniirc_extras import AbstractIRC, Hostmask
 from miniirc_extras.features.chans import Channel, ModeList, ChannelTracker
 from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 __version__ = '2.2.6'
 
@@ -273,24 +274,24 @@ class Trackr:
         return self.irc.chans # type: ignore
 
     # __init__
-    def __init__(self, rawconfig: Dict[str, Dict[str, str]],
+    def __init__(self, rawconfig: dict[str, dict[str, str]],
             debug: bool = False) -> None:
         if 'trackr' not in rawconfig:
             err('Invalid or non-existent config file!')
-        config: Dict[str, str] = rawconfig['trackr']
+        config: dict[str, str] = rawconfig['trackr']
         del rawconfig
-        self.config: Dict[str, str] = config
-        self.cooldowns: Dict[str, float] = {}
+        self.config: dict[str, str] = config
+        self.cooldowns: dict[str, float] = {}
 
         self._conf_assert('ip', ('ssl_port', int), 'nick', 'channels',
             'admins')
 
         self._secret: bytes = config.get('secret', '').encode('utf-8')
-        self.admins: FrozenSet[str] = frozenset(map(
+        self.admins: frozenset[str] = frozenset(map(
             lambda n : n.strip().lower(), config['admins'].split(',')))
         self.prefix = config.get('prefix', config['nick'] + ': ')
 
-        self.server_list: Optional[FrozenSet[str]] = None
+        self.server_list: Optional[frozenset[str]] = None
         serverlist = config.get('server_list', '').strip()
         if serverlist:
             self.server_list = frozenset(map(str.strip, serverlist.split(',')))
@@ -323,7 +324,7 @@ class Trackr:
         self.irc.connect()
 
     # Function copied from lurklite
-    def _conf_assert(self, *keys: Union[str, Tuple[str, type]]) -> None:
+    def _conf_assert(self, *keys: Union[str, tuple[str, type]]) -> None:
         for key in keys:
             req: Optional[type] = None
             if isinstance(key, tuple):
@@ -426,7 +427,7 @@ class Trackr:
         total: int    = 0
         inactive: int = 0
         tplayers: int = 0
-        slist: List[Tuple[User, PlayerList]] = list(self.items(channel))
+        slist: list[tuple[User, PlayerList]] = list(self.items(channel))
         slist.sort(key = lambda s : s[0].nick.lower())
 
         # Iterate over every server in the channel
@@ -436,7 +437,7 @@ class Trackr:
                 continue
             total    += 1
             tplayers += len(players)
-            players2: List[Player] = list(players.values())
+            players2: list[Player] = list(players.values())
             players2.sort()
             irc.msg(channel, 'Players on \2{}\2: {}'.format(server.nick,
                 ', '.join(players2)))
@@ -544,14 +545,14 @@ class Trackr:
 
     # Handle PRIVMSGs
     def _handle_privmsg(self, irc: AbstractIRC, hostmask: Hostmask,
-            args: List[str]) -> None:
+            args: list[str]) -> None:
         nick:    str = hostmask[0]
         channel: str = args[0]
         msg:     str = args[-1]
 
         # Check for relayed users
         if msg.startswith('<'):
-            n: List[str] = msg.split('> ', 1)
+            n: list[str] = msg.split('> ', 1)
             if len(n) > 1 and '>' not in n[0]:
                 nick = f'{n[0][1:]}@{nick}'
                 msg  = n[1].strip()
@@ -629,7 +630,7 @@ class Trackr:
             players.server = server
 
         if msg.startswith('*** '):
-            a: List[str] = msg.split(' ', 3)
+            a: list[str] = msg.split(' ', 3)
             if len(a) <= 2:
                 return
             if a[2] == 'joined':
@@ -638,7 +639,7 @@ class Trackr:
                 del players[a[1]]
             del a
         elif msg.startswith('Connected players: '):
-            new_players: List[str] = args[-1][19:].replace(' ', '').split(',')
+            new_players: list[str] = args[-1][19:].replace(' ', '').split(',')
             for player in new_players:
                 players.Player(player)
 
@@ -667,7 +668,7 @@ class Trackr:
 
     # Handle JOINs
     def _handle_join(self, irc: AbstractIRC, hostmask: Hostmask,
-            args: List[str]) -> None:
+            args: list[str]) -> None:
         time.sleep(1)
         if hostmask[0].lower() == irc.current_nick.lower():
             for server in self.servers(args[0]):
