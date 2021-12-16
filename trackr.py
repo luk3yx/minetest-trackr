@@ -693,7 +693,7 @@ def main() -> Trackr:
     import argparse, configparser
     parser = argparse.ArgumentParser()
     parser.add_argument('config_file',
-        help='The config file to use with lurklite.')
+        help='The config file to use with trackr.')
     parser.add_argument('--verbose', '--debug', action='store_true',
         help='Enable verbose/debugging mode.')
     parser.add_argument('-v', '--version', action='version',
