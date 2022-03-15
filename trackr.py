@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.6
+# trackr 2.2.7
 #
-# © 2020 by luk3yx.
+# © 2020-2022 by luk3yx.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Optional, Union
 
-__version__ = '2.2.6'
+__version__ = '2.2.7'
 
 # Errors
 class BotError(Exception):
@@ -282,6 +282,7 @@ class Trackr:
         del rawconfig
         self.config: dict[str, str] = config
         self.cooldowns: dict[str, float] = {}
+        self.cooldown_msgs_sent: set[str] = set()
 
         self._conf_assert('ip', ('ssl_port', int), 'nick', 'channels',
             'admins')
@@ -418,10 +419,14 @@ class Trackr:
 
         t = time.monotonic()
         if t <= self.cooldowns.get(channel, -math.inf) + self.cooldown:
+            if channel in self.cooldown_msgs_sent:
+                return
             irc.msg(channel, f'{nick}: You can only run \2.players\2 once',
                 f'every \2{self.cooldown} seconds\2.')
+            self.cooldown_msgs_sent.add(channel)
             return
         self.cooldowns[channel] = t
+        self.cooldown_msgs_sent.discard(channel)
 
         # Get the player list
         total: int    = 0
