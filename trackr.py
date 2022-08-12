@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.7
+# trackr 2.2.8
 #
 # © 2020-2022 by luk3yx.
 #
@@ -51,7 +51,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Optional, Union
 
-__version__ = '2.2.7'
+__version__ = '2.2.8'
 
 # Errors
 class BotError(Exception):
@@ -451,7 +451,7 @@ class Trackr:
 
         # Display the summary
         irc.msg(channel, ('Total: \2{} player{}\2 across \2{} active '
-            'server{}\2 (and {} inactive server{}).').format(tplayers,
+            'server{}\2 (and {} empty server{}).').format(tplayers,
             plural(tplayers), total, plural(total), inactive,
             plural(inactive)))
 
