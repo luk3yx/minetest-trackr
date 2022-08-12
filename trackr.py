@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.2.8
+# trackr 2.3.0
 #
 # © 2020-2022 by luk3yx.
 #
@@ -23,21 +23,7 @@
 #  • Create a trackr.ini file similar to the below one.
 #  • Run the script.
 #
-# Config file (trackr.ini) format:
-#  [trackr]
-#  ip = irc.edgy1.net
-#  ssl_port = 6697
-#  channels = #edgy1, #ls-servers
-#  nick = bot-nickname
-#  prefix = ,
-#  secret = Random string to use when generating passwords
-#  admins = Edgy1, luk3yx
-#
-#  # Optional and case-sensitive. If not specified, server_mode is used.
-#  # server_list = MinetestServer1, MinetestServer2
-#
-#  # Optional, the mode to use when finding MT servers. Default: v
-#  # server_mode = v
+# See trackr.example.ini for an example configuration
 #
 
 from __future__ import annotations
@@ -51,7 +37,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Optional, Union
 
-__version__ = '2.2.8'
+__version__ = '2.3.0'
 
 # Errors
 class BotError(Exception):
@@ -301,6 +287,16 @@ class Trackr:
         if len(self.server_mode) != 1:
             err(f'Invalid server mode {self.server_mode!r}.')
 
+        # enable_legacy_passwords should default to true
+        pwds = config.get('enable_legacy_passwords', '1').casefold().strip()
+        self.enable_legacy_passwords = pwds in ('true', 'yes', '1')
+
+        self.new_domain: Optional[str] = None
+        self.legacy_domains: Optional[list[str]] = None
+        if 'new_domain' in config and 'legacy_domains' in config:
+            self.new_domain = config['new_domain']
+            self.legacy_domains = config['legacy_domains'].split(',')
+
         kwargs = {}
         for i in 'ident', 'realname', 'ns_identity', 'connect_modes', \
                 'quit_message':
@@ -390,9 +386,10 @@ class Trackr:
         return False
 
     # Derive a password from a hostmask
-    def get_password(self, hostmask: Hostmask) -> str:
+    def get_password(self, hostmask: Hostmask, legacy: bool = False) -> str:
         host = '/'.join(hostmask[2].split('/', 3)[:3])
-        host = '.'.join(host.split('.', 2)[:2])
+        if legacy:
+            host = '.'.join(host.split('.', 2)[:2])
         pw   = f'{hostmask[0]}@{host}'.encode('utf-8')
         pw  += b', secret: ' + self._secret
 
@@ -664,12 +661,48 @@ class Trackr:
                 server.msg('cmd setpassword trackr',
                     self.get_password(hostmask))
                 server.msg('cmd /lua irc.say("[trackr] Logged in!")')
-            self.debug('Logged into', hostmask[0])
+            elif server.get('password_attempt'):
+                # Update the password to the current one if it's using an
+                # older password
+                print(f'[trackr] Auto-updating password for {hostmask[0]}')
+                server.msg('cmd setpassword trackr', self.get_password(hostmask))
+                del server['password_attempt']
+
             server['logged_in'] = True
         elif msg.startswith('Incorrect password'):
-            print('[trackr] WARNING: Incorrect password for server',
-                hostmask[0], file = sys.stderr)
+            # Try using legacy passwords
+            attempt = server.get('password_attempt', 0)
+            if pw := self._get_pw_attempt(hostmask, attempt):
+                print(f'[trackr] Invalid password for {hostmask[0]!r}, trying '
+                      f'with an older password (attempt {attempt + 1})')
+                server['password_attempt'] = attempt + 1
+                server.msg('login trackr', pw)
+                return
+
             server['logged_in'] = False
+            print('[trackr] WARNING: Incorrect password for server',
+                hostmask[0], file=sys.stderr)
+
+    def _get_pw_attempt(self, hostmask: Hostmask, attempt: int) -> Optional[str]:
+        if not self.enable_legacy_passwords:
+            return None
+
+        # First try with the legacy password for the current hostmask
+        if attempt == 0 and hostmask[2].count('.') > 2:
+            return self.get_password(hostmask, True)
+        elif not self.new_domain or hostmask[2] != self.new_domain:
+            return None
+
+        # Then go through legacy domains
+        # This will be horribly slow
+        idx = (attempt - 1) // 2
+        if not self.legacy_domains or idx >= len(self.legacy_domains):
+            return None
+
+        return self.get_password(
+            Hostmask(hostmask[0], hostmask[1], self.legacy_domains[idx]),
+            attempt % 2 == 0,
+        )
 
     # Handle JOINs
     def _handle_join(self, irc: AbstractIRC, hostmask: Hostmask,
@@ -694,7 +727,7 @@ class Trackr:
             'players - If you are a human, report this to the bot owner.')
 
 # The main script
-def main() -> Trackr:
+def main() -> None:
     import argparse, configparser
     parser = argparse.ArgumentParser()
     parser.add_argument('config_file',
@@ -711,10 +744,12 @@ def main() -> Trackr:
 
     # Create the bot
     try:
-        return Trackr(config, debug=args.verbose) # type: ignore
+        trackr = Trackr(config, debug=args.verbose) # type: ignore
     except BotError as e:
         print(f'ERROR: {e}', file=sys.stderr)
         raise SystemExit(1)
+
+    trackr.irc.wait_until_disconnected()
 
 # Call main()
 if __name__ == '__main__':
