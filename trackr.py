@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.3.0
+# trackr 2.3.1
 #
 # © 2020-2022 by luk3yx.
 #
@@ -37,7 +37,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Optional, Union
 
-__version__ = '2.3.0'
+__version__ = '2.3.1'
 
 # Errors
 class BotError(Exception):
@@ -112,6 +112,10 @@ class Player(str):
     def kick(self, sender: str, reason: str) -> None:
         assert self._server
         self._server.msg(f'cmd kick {self} By {sender}: {reason}')
+
+    def unban(self) -> None:
+        assert self._server
+        self._server.msg(f'cmd xunban {self}')
 
     # Mute the player
     def mute(self) -> None:
@@ -507,6 +511,10 @@ class Trackr:
                 return f'The server {sid!r} does not exist!'
 
             if victim not in server.get('players', ()):
+                if cmd == 'unban':
+                    server.msg(f'xunban {victim}')
+                    return ('That player is not online, an unban command has '
+                            'been sent anyway.')
                 return f'The player {victim!r} is not in {server.nick}.'
         else:
             for s, p in self.items(chan):
@@ -524,7 +532,7 @@ class Trackr:
         res: Optional[str] = None
 
         try:
-            if cmd in ('mute', 'unmute'):
+            if cmd in ('mute', 'unmute', 'unban'):
                 res = getattr(player, cmd)()
             elif cmd in ('warn', 'kick'):
                 res = getattr(player, cmd)(hostmask[0], n[-1])
@@ -581,7 +589,7 @@ class Trackr:
             if cmd == 'players':
                 return self._players_cmd(channel, nick)
             elif cmd in ('kick', 'mute', 'unmute', 'tempmute', 'warn',
-                    'tempban'):
+                    'tempban', 'unban'):
                 irc.msg(channel, nick + ': ' + self._moderate(channel,
                     hostmask, cmd, cmd_args[1] if len(cmd_args) > 1 else ''))
                 return
