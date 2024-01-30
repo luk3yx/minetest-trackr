@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# trackr 2.3.1
+# trackr 2.3.2
 #
 # © 2020-2022 by luk3yx.
 #
@@ -27,7 +27,7 @@
 #
 
 from __future__ import annotations
-import hashlib, math, miniirc, miniirc_extras, os, random, sys, time
+import hashlib, math, miniirc, miniirc_extras, os, random, re, sys, time
 assert miniirc.ver >= (1,4,3), 'Update miniirc.'
 assert miniirc_extras.ver >= (0,2,5), 'Update miniirc_extras.'
 
@@ -37,7 +37,7 @@ from miniirc_extras.features.users import AbstractChannel, User, UserTracker
 
 from typing import Optional, Union
 
-__version__ = '2.3.1'
+__version__ = '2.3.2'
 
 # Errors
 class BotError(Exception):
@@ -243,6 +243,12 @@ class PlayerList(dict):
 
     Player = Player_
     del Player_
+
+
+_connected_players_re = re.compile(
+    r'^(?:\d+ )?connected player(?:s|\(s\))?: (.*)$', re.IGNORECASE
+)
+
 
 # The bot
 class Trackr:
@@ -648,8 +654,8 @@ class Trackr:
             elif a[2] == 'left' and a[1] in players:
                 del players[a[1]]
             del a
-        elif msg.startswith('Connected players: '):
-            new_players: list[str] = args[-1][19:].replace(' ', '').split(',')
+        elif match := _connected_players_re.match(msg):
+            new_players: list[str] = match.group(1).replace(' ', '').split(',')
             for player in new_players:
                 players.Player(player)
 
